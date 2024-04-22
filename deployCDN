@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+
+# deployCDN - Contains script to deploy CDN (copy necessary files onto server machines)
+
+# +-----------+
+# |  Imports  |
+# +-----------+
+import argparse, socket, subprocess, time
+from src import *
+
+# +-----------------+
+# |  Configuration  |
+# +-----------------+
+DNS_CONFIG   = open('.config/dns.config', 'r')
+DNS_SERVERS  = DNS_CONFIG.readlines() 
+DNS_CONFIG.close()
+
+HTTP_CONFIG  = open('.config/http.config', 'r')
+HTTP_SERVERS = HTTP_CONFIG.readlines()
+HTTP_CONFIG.close()
+
+
+
+# +-----------------+
+# |  Main Function  |
+# +-----------------+
+if __name__ == '__main__':
+    # Parse arguments
+    parser = argparse.ArgumentParser(description='CDN Deploy Script')
+    parser.add_argument('-u', '--username', required=True,
+                        dest='username', type=str,
+                        help='The username used to log in with SSH')
+    parser.add_argument('-i', '--identity_file', required=True,
+                        dest='identity_file', type=str,
+                        help='The path to the private key used for logging into nodes')
+    args = parser.parse_args()
+    
+    # Deploy DNS server(s) 
+    for host in DNS_SERVERS:
+        host_ip = socket.gethostbyname(host)
+        print(f'Deploying DNS server at {host} ({host_ip})')
+        # Main script
+        subprocess.run([
+                        f'scp -i {args.identity_file}', 
+                        './dnsserver', 
+                        f'{args.username}@{host_ip}:~/', 
+                        ])
+        # Source module
+        subprocess.run([
+                        f'scp -i {args.identity_file}',
+                        './src/cdnresolver.py', './src/__init__.py', 
+                        f'{args.username}@{host_ip}:~/src/'
+                        ])
+
+    # Deploy HTTP server(s)
+    for host in HTTP_SERVERS:
+        host_ip = socket.gethostbyname(host)
+        print(f'Deploying HTTP server at {host} ({host_ip})')
+        # Main script
+        subprocess.run([
+                        f'scp -i {args.identity_file}', 
+                        './httpserver', 
+                        f'{args.username}@{host_ip}:~/', 
+                        ])
+        # Source module
+        subprocess.run([
+                        f'scp -i {args.identity_file}', 
+                        './src/httpserver.py', './src/cache.py', './src/__init__.py',  
+                        f'{args.username}@{host_ip}:~/src/'
+                        ])

@@ -1,0 +1,40 @@
+#!/usr/bin/env python3 
+
+# dnsserver - Contains script to run a DNSServer locally
+
+# +-----------+
+# |  Imports  |
+# +-----------+
+import argparse
+from src.cdnresolver import *
+
+# +-------------+
+# |  Constants  |
+# +-------------+
+ANYWHERE = '0.0.0.0'
+
+# +-----------------+
+# |  Main Function  |
+# +-----------------+
+if __name__ == "__main__":
+    # Parse arguments 
+    parser = argparse.ArgumentParser(description='DNS server')
+    parser.add_argument('-p', '--port', 
+                        dest="port", type=int, required=True, 
+                        help="The port to bind to")
+    parser.add_argument('-n', '--name',
+                        dest="name", type=str, required=True, 
+                        help="The CDN-specific name to translate to an IP")
+    parser.add_argument('-v', '--verbose',
+                        dest='verbose', action='store_true', default=False, 
+                        help='Runs the server in verbose mode')
+    args = parser.parse_args()
+
+    # Start a DNSServer with given arguments, and CDNResolver
+    resolver = CDNResolver(name=args.name)
+    logger = DNSLogger('request,reply,truncated,error', False)
+    server = DNSServer(resolver,
+                       port=args.port,
+                       address=ANYWHERE,
+                       logger=logger)
+    server.start()

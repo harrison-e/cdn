@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+
+# stopCDN - Contains script to stop CDN (kill server script processes on server machines)
+
+# +-----------+
+# |  Imports  |
+# +-----------+
+import argparse, subprocess, socket 
+from src import *
+
+# +-----------------+
+# |  Configuration  |
+# +-----------------+
+DNS_CONFIG   = open('.config/dns.config', 'r')
+DNS_SERVERS  = DNS_CONFIG.readlines() 
+DNS_CONFIG.close()
+
+HTTP_CONFIG  = open('.config/http.config', 'r')
+HTTP_SERVERS = HTTP_CONFIG.readlines()
+HTTP_CONFIG.close()
+
+
+
+# +-----------------+
+# |  Main Function  |
+# +-----------------+
+if __name__ == '__main__':
+    # Parse arguments
+    parser = argparse.ArgumentParser(description='CDN Stop Script')
+    parser.add_argument('-u', '--username',
+                        dest='username', type=str, required=True,
+                        help='The username used to log in with SSH')
+    parser.add_argument('-i', '--identity_file',
+                        dest='identity_file', type=str, required=True,
+                        help='The path to the private key used for logging into nodes')
+    args = parser.parse_args()
+
+    # Stop DNS Server(s) 
+    for host in DNS_SERVERS:
+        print(f'Starting DNS server at {host} ({socket.gethostbyname(host)})')
+        subprocess.run([f'ssh -i {args.identity_file} {args.username}@{host}', 
+                        f'servers=($(pgrep python3 -u {args.username}));',
+                        'for s in ${servers};',
+                        'do kill ${s};',
+                        'done;',
+                        'exit'
+                        ])
+
+    # Stop HTTP Server(s)
+    for host in HTTP_SERVERS:
+        print(f'Stopping HTTP server at {host} ({socket.gethostbyname(host)})')
+        subprocess.run([f'ssh -i {args.identity_file} {args.username}@{host}', 
+                        f'servers=($(pgrep python3 -u {args.username}));',
+                        'for s in ${servers};',
+                        'do kill ${s};',
+                        'done;',
+                        'exit'
+                        ])

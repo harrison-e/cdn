@@ -1,0 +1,30 @@
+#!/usr/bin/env python3 
+
+# httpserver - Contains script to run a HTTPServer locally
+
+# +-----------+
+# |  Imports  |
+# +-----------+
+import argparse
+from src.httpserver import *
+
+# +-----------------+
+# |  Main Function  |
+# +-----------------+
+if __name__ == '__main__':
+    # Parse arguments 
+    parser = argparse.ArgumentParser(description='HTTP server')
+    parser.add_argument('-p', '--port',
+                        dest='port', type=int, required=True, 
+                        help='The port to use')
+    parser.add_argument('-o', '--origin',
+                        dest='origin', type=str, required=True, 
+                        help='The name of the origin server for the CDN')
+    parser.add_argument('-v', '--verbose',
+                        dest='verbose', action='store_true', default=False,
+                        help='Runs the server in verbose mode')
+    args = parser.parse_args()
+
+    # Start a HTTPServer with given arguments
+    server = HTTPServer(args)
+    server.start()

@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+
+# runCDN - Contains script to run CDN (run server scripts on server machines) 
+
+# +-----------+
+# |  Imports  |
+# +-----------+
+import argparse, subprocess, socket 
+from src import *
+
+# +-----------------+
+# |  Configuration  |
+# +-----------------+
+DNS_CONFIG   = open('.config/dns.config', 'r')
+DNS_SERVERS  = DNS_CONFIG.readlines() 
+DNS_CONFIG.close()
+
+HTTP_CONFIG  = open('.config/http.config', 'r')
+HTTP_SERVERS = HTTP_CONFIG.readlines()
+HTTP_CONFIG.close()
+
+
+
+# +-----------------+
+# |  Main Function  |
+# +-----------------+
+if __name__ == '__main__':
+    # Parse arguments
+    parser = argparse.ArgumentParser(description='CDN Run Script')
+    parser.add_argument('-p', '--port',
+                        dest='port', type=str, required=True, 
+                        help='The port to bind to')
+    parser.add_argument('-o', '--origin',
+                        dest='origin', type=str, required=True, 
+                        help='The name of the origin server for the CDN')
+    parser.add_argument('-n', '--name',
+                        dest='name', type=str, required=len(DNS_SERVERS) > 0,
+                        help='The CDN-specific name that will be translated into an IP address')
+    parser.add_argument('-u', '--username',
+                        dest='username', type=str, required=True,
+                        help='The username used to log in with SSH')
+    parser.add_argument('-i', '--identity_file',
+                        dest='identity_file', type=str, required=True,
+                        help='The path to the private key used for logging into nodes')
+    parser.add_argument('-v', '--verbose',
+                        dest='verbose', action='store_true', default=False, 
+                        help='Deploys the CDN in verbose mode')
+    args = parser.parse_args()
+    
+    # Spin up DNS server(s) 
+    for host in DNS_SERVERS:
+        print(f'Starting DNS server at {host} ({socket.gethostbyname(host)})')
+        subprocess.run(args=[
+                             f'(echo "nohup ./dnsserver -p {args.port} -n {args.name} ' + 
+                             f'{("-v" if args.verbose else "")} & exit") |' +
+                             f'ssh -tt -i {args.identity_file} {args.username}@{host}'
+                            ],
+                       shell=True) 
+
+    # Spin up HTTP server(s)
+    for host in HTTP_SERVERS:
+        print(f'Starting HTTP server at {host} ({socket.gethostbyname(host)})')
+        subprocess.run(args=[
+                             f'(echo "nohup ./httpserver -p {args.port} -o {args.origin} ' + 
+                             f'{("-v" if args.verbose else "")} & exit") |' +
+                             f'ssh -tt -i {args.identity_file} {args.username}@{host}'
+                            ],
+                       shell=True) 
